@@ -17,4 +17,5 @@ Suggests:
     testthat
 Imports: 
     magrittr,
-    tibble
+    tibble,
+    vroom
