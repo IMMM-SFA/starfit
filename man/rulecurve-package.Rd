@@ -6,6 +6,8 @@
 \alias{rulecurve-package}
 \title{rulecurve: What the Package Does (One Line, Title Case)}
 \description{
+\if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
+
 A tool for inferring reservoir storage targets and release rules.
 }
 \author{

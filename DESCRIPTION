@@ -18,4 +18,8 @@ Suggests:
 Imports: 
     magrittr,
     tibble,
-    vroom
+    vroom,
+    dplyr,
+    lubridate,
+    clisymbols,
+    crayon
