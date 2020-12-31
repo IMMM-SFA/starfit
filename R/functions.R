@@ -1,3 +1,34 @@
+#' convert_parameters_to_storage_targets
+#'
+#' @description fit parameters of a constrained harmonic
+#' @param parameters vector of length 5 giving, in order, intercept, sine term, cosine term, and upper and lower constraints of the harmonic.
+#' @param target_name optional. Character string naming the target. E.g., "flood" or "conservation." Default is simply "target."
+#' @return a tibble of storage target levels by week
+#' @importFrom tibble tibble
+#' @importFrom dplyr mutate if_else
+#' @export
+#'
+convert_parameters_to_storage_targets <- function(parameters, target_name){
+
+  parameters[1] -> p1
+  parameters[2] -> p2
+  parameters[3] -> p3
+  parameters[4] -> p4
+  parameters[5] -> p5
+
+  tibble(epiweek = 1:52) %>%
+    mutate(target = p1 + p2 * sin(2 * pi * epiweek / 52) + p3 * cos(2 * pi * epiweek / 52)) %>%
+    mutate(target = if_else(target > p4, p4, target)) %>%
+    mutate(target = if_else(target < p5, p5, target)) ->
+    storage_targets
+
+  if(!missing(target_name)) names(storage_targets) <- c("epiweek", target_name)
+
+  return(storage_targets)
+
+}
+
+
 #' fit_constrained_harmonic
 #'
 #' @description fit parameters of a constrained harmonic
@@ -19,6 +50,17 @@ fit_constrained_harmonic <- function(data_for_harmonic_fitting){
   # parameters 4 and 5 (upper and lower constraints on harmonic)
   ub_on_curve <- unname(data_for_harmonic_fitting$s_pct %>% quantile(0.9))
   lb_on_curve <- unname(data_for_harmonic_fitting$s_pct %>% quantile(0.1))
+
+  # if no sine or cosine term to the harmonic, assume a constant...
+  # ... and return result with intercept parameter only
+  if(round(intercept, 5) == 100 | round(intercept, 5) == 0 |
+     round(sin_term, 5) == 0 & round(cosine_term, 5) == 0 |
+     round(ub_on_curve, 1) == round(lb_on_curve, 1)){
+    return(
+      list(solution = c(intercept, NA_real_, NA_real_, NA_real_, NA_real_))
+    )
+  }
+
 
   # function to evaluate goodness-of-fit of fitted harmonic...
   # ... (used as objective function in optimization of constrained harmonic)
