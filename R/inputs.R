@@ -17,7 +17,8 @@ read_reservoir_data <- function(USRDATS_path, dam_id){
                          inflow = "d",
                          outflow = "d",
                          elevation = "d",
-                         evaporation = "d")) %>%
+                         evaporation = "d"),
+        progress = FALSE) %>%
     # stamp units into column names
     select(date, s_MCM = storage, i_cumecs = inflow, r_cumecs = outflow)
 
@@ -37,7 +38,7 @@ read_reservoir_attributes <- function(USRDATS_path, dam_id = NULL){
 
   vroom(paste0(USRDATS_path, "/attributes/",
                "Reservoir_Attributes.csv"),
-        col_types = cols()) -> attributes_all
+        col_types = cols(), progress = FALSE) -> attributes_all
 
   if(is.null(dam_id)){
     return(attributes_all)
