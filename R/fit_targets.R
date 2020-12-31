@@ -101,19 +101,37 @@ fit_targets <- function(USRDATS_path, dam_id){
 
 
   # fit the flood harmonic
-  fit_constrained_harmonic(data_for_flood_harmonic) ->
-    flood_harmonic_opt_output
+  fit_constrained_harmonic(data_for_flood_harmonic) %>%
+    .[["solution"]] ->
+    p_flood_harmonic
 
   # fit the conservation harmonic
-  fit_constrained_harmonic(data_for_conservation_harmonic) ->
-    conservation_harmonic_opt_output
+  fit_constrained_harmonic(data_for_conservation_harmonic) %>%
+    .[["solution"]] ->
+    p_conservation_harmonic
+
+  # evaluate targets to remove any superfluous constraints
+  convert_parameters_to_storage_targets(p_flood_harmonic,
+                                        constrain = FALSE) -> targets_flood
+  convert_parameters_to_storage_targets(p_conservation_harmonic,
+                                        constrain = FALSE) -> targets_cons
+
+  targets_flood[["target"]] %>% max() -> max_flood_target
+  targets_flood[["target"]] %>% min() -> min_flood_target
+  targets_cons[["target"]] %>% max() -> max_cons_target
+  targets_cons[["target"]] %>% min() -> min_cons_target
+
+  if(p_flood_harmonic[4] > max_flood_target) p_flood_harmonic[4] <- Inf
+  if(p_flood_harmonic[5] < min_flood_target) p_flood_harmonic[5] <- -Inf
+  if(p_conservation_harmonic[4] > max_cons_target) p_conservation_harmonic[4] <- Inf
+  if(p_conservation_harmonic[5] < min_cons_target) p_conservation_harmonic[5] <- -Inf
 
   return(
     list(
       "id" = dam_id,
       "weekly storage" = storage_weekly,
-      "flood target parameters" = flood_harmonic_opt_output$solution,
-      "conservation target parameters" = conservation_harmonic_opt_output$solution
+      "flood target parameters" = p_flood_harmonic,
+      "conservation target parameters" = p_conservation_harmonic
     )
   )
 

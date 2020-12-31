@@ -3,18 +3,19 @@
 #' @description fit parameters of a constrained harmonic
 #' @param parameters vector of length 5 giving, in order, intercept, sine term, cosine term, and upper and lower constraints of the harmonic.
 #' @param target_name optional. Character string naming the target. E.g., "flood" or "conservation." Default is simply "target."
+#' @param constrain logical. Constrain targets?
 #' @return a tibble of storage target levels by week
 #' @importFrom tibble tibble
 #' @importFrom dplyr mutate if_else
 #' @export
 #'
-convert_parameters_to_storage_targets <- function(parameters, target_name){
+convert_parameters_to_storage_targets <- function(parameters, target_name, constrain = TRUE){
 
   parameters[1] -> p1
   parameters[2] -> p2
   parameters[3] -> p3
-  parameters[4] -> p4
-  parameters[5] -> p5
+  if_else(constrain == TRUE, parameters[4], Inf) -> p4
+  if_else(constrain == TRUE, parameters[5], -Inf) -> p5
 
   tibble(epiweek = 1:52) %>%
     mutate(target = p1 + p2 * sin(2 * pi * epiweek / 52) + p3 * cos(2 * pi * epiweek / 52)) %>%
@@ -57,7 +58,7 @@ fit_constrained_harmonic <- function(data_for_harmonic_fitting){
      round(sin_term, 5) == 0 & round(cosine_term, 5) == 0 |
      round(ub_on_curve, 1) == round(lb_on_curve, 1)){
     return(
-      list(solution = c(intercept, NA_real_, NA_real_, NA_real_, NA_real_))
+      list(solution = c(intercept, 0, 0, Inf, -Inf))
     )
   }
 

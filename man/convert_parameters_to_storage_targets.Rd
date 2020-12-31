@@ -4,12 +4,18 @@
 \alias{convert_parameters_to_storage_targets}
 \title{convert_parameters_to_storage_targets}
 \usage{
-convert_parameters_to_storage_targets(parameters, target_name)
+convert_parameters_to_storage_targets(
+  parameters,
+  target_name,
+  constrain = TRUE
+)
 }
 \arguments{
 \item{parameters}{vector of length 5 giving, in order, intercept, sine term, cosine term, and upper and lower constraints of the harmonic.}
 
 \item{target_name}{optional. Character string naming the target. E.g., "flood" or "conservation." Default is simply "target."}
+
+\item{constrain}{logical. Constrain targets?}
 }
 \value{
 a tibble of storage target levels by week
