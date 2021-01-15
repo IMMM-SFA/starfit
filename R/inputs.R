@@ -53,3 +53,20 @@ read_reservoir_attributes <- function(USRDATS_path, dam_id = NULL){
   return(attributes_dam)
 
 }
+
+
+#' read_GRanD_HUC8
+#'
+#' @description gets HUC8 for all US GRanD IDs
+#' @importFrom vroom vroom cols
+#' @return tibble of HUC8s
+#' @export
+#'
+read_GRanD_HUC8 <- function(){
+
+  vroom(
+    paste0(system.file("extdata/", package = "rulecurve"),
+           "GRAND_HUC8.csv"),
+    comment = "#", col_types = cols())
+
+}

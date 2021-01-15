@@ -4,7 +4,7 @@
 \name{rulecurve-package}
 \alias{rulecurve}
 \alias{rulecurve-package}
-\title{rulecurve: What the Package Does (One Line, Title Case)}
+\title{rulecurve: Infer Reservoir Operations From Data.}
 \description{
 \if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
 

@@ -92,3 +92,52 @@ fit_constrained_harmonic <- function(data_for_harmonic_fitting){
 
 }
 
+
+#' find_closest_dam
+#'
+#' @description finds the dam that is closest in terms of purposes served and Euclidean distance
+#' @param dam_attr attributes of target dam
+#' @param other_dams table of attributes for possible canditate dams to replicate
+#' @return GRAND_ID of the target dam
+#' @importFrom tibble tibble
+#' @importFrom dplyr mutate if_else arrange select first
+#' @importFrom sp spDistsN1
+#' @export
+#'
+find_closest_dam <- function(dam_attr, other_dams){
+
+  if(nrow(other_dams) == 0) return(tibble(GRAND_ID = NA_character_, matches = -Inf))
+
+  dam_attr[["flood"]] -> fl
+  dam_attr[["hydro"]] -> hy
+  dam_attr[["supply"]] -> su
+  dam_attr[["irr"]] -> ir
+
+
+  # determine best matches
+  other_dams %>%
+    mutate(flood_match = if_else(flood == fl, 1, 0),
+           hydro_match = if_else(hydro == hy, 1, 0),
+           supply_match = if_else(supply == su, 1, 0),
+           irr_match = if_else(irr == ir, 1, 0),
+           matches = flood_match + hydro_match + supply_match + irr_match) %>%
+    arrange(-matches) %>%
+    filter(matches == first(.[["matches"]])) -> best_matches
+
+  # return if there is a clear winning match
+  if(nrow(best_matches) == 1) return(select(best_matches, GRAND_ID, matches))
+
+  # otherwise find closest distance
+
+  best_matches %>%
+    mutate(
+      euc_dist = spDistsN1(
+        as.matrix(select(best_matches, lon, lat)),
+        as.matrix(select(dam_attr, lon, lat))
+        )
+      ) %>%
+    arrange(-euc_dist) %>% .[1,] -> best_match
+
+  return(select(best_match, GRAND_ID, matches))
+
+}
