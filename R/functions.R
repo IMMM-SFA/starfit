@@ -9,7 +9,7 @@
 #' @importFrom dplyr mutate if_else
 #' @export
 #'
-convert_parameters_to_storage_targets <- function(parameters, target_name, constrain = TRUE){
+convert_parameters_to_targets <- function(parameters, target_name, constrain = TRUE){
 
   parameters[1] -> p1
   parameters[2] -> p2
@@ -21,11 +21,11 @@ convert_parameters_to_storage_targets <- function(parameters, target_name, const
     mutate(target = p1 + p2 * sin(2 * pi * epiweek / 52) + p3 * cos(2 * pi * epiweek / 52)) %>%
     mutate(target = if_else(target > p4, p4, target)) %>%
     mutate(target = if_else(target < p5, p5, target)) ->
-    storage_targets
+    targets
 
-  if(!missing(target_name)) names(storage_targets) <- c("epiweek", target_name)
+  if(!missing(target_name)) names(targets) <- c("epiweek", target_name)
 
-  return(storage_targets)
+  return(targets)
 
 }
 
@@ -61,7 +61,6 @@ fit_constrained_harmonic <- function(data_for_harmonic_fitting){
       list(solution = c(intercept, 0, 0, Inf, -Inf))
     )
   }
-
 
   # function to evaluate goodness-of-fit of fitted harmonic...
   # ... (used as objective function in optimization of constrained harmonic)
@@ -139,5 +138,90 @@ find_closest_dam <- function(dam_attr, other_dams){
     arrange(-euc_dist) %>% .[1,] -> best_match
 
   return(select(best_match, GRAND_ID, matches))
+
+}
+
+
+#' aggregate_to_epiweeks
+#'
+#' Aggregate data to epiweek and back-calculate release and inflow using mass balance
+aggregate_to_epiweeks <- function(x){
+
+    which(x$epiweek %>% diff() != 0) %>% first() -> start_snip
+
+    if(!(start_snip %in% 1:8)) stop("first water week duration > 8 days!")
+
+    if(start_snip < 7) {
+      x_snipped <- x[-(1:start_snip), ]
+    }else{
+      x_snipped <- x
+    }
+
+    x_snipped %>%
+      mutate(s_end = lead(s, 8)) %>%
+      group_by(year, epiweek) %>%
+      summarise(i = sum(i),
+                r = sum(r),
+                s_start = first(s),
+                s_end = first(s_end)) %>%
+      ungroup() %>%
+      filter(epiweek != 53,
+             !is.na(s_end))
+}
+
+#' back_calc_missing_flows
+#'
+#' Compute i or r from mass balance (if either is missing)
+back_calc_missing_flows <- function(x){
+  x %>%
+    mutate(s_change = s_end - s_start,
+           r_ = if_else((i - s_change) < 0, 0, i - s_change),
+           i_ = r + s_change) -> x_
+
+  x_ %>%
+    filter(!is.na(r) & !is.na(i)) -> full_data_points
+
+  if(nrow(full_data_points) == 0){
+    data_points_on_most_data_scarce_epiweek <- -Inf
+  }else{
+    full_data_points %>%
+      group_by(epiweek) %>%
+      count() %>% .[["n"]] %>% min() ->
+      data_points_on_most_data_scarce_epiweek
+  }
+
+
+
+  if(data_points_on_most_data_scarce_epiweek >= min_r_i_datapoints){
+    return(
+      x_ %>%
+        select(year, epiweek, s_start, i, r)
+    )
+  }
+
+  sum(is.na(x_$i)) -> missing_i
+  sum(is.na(x_$r)) -> missing_r
+
+
+  if(missing_i <= missing_r){
+    return(
+      x_ %>%
+        mutate(i = if_else(is.na(i) & !is.na(r), i_, i),
+               r = if_else(is.na(r_), r, r_)) %>%
+        select(year, epiweek, s_start, i, r)
+    )
+  }
+
+  if(missing_i > missing_r){
+    return(
+      x_ %>%
+        mutate(r = if_else(is.na(r) & !is.na(i), r_, r),
+               i = if_else(is.na(i_), i, i_)) %>%
+        select(year, epiweek, s_start, i, r)
+    )
+
+  }
+
+
 
 }

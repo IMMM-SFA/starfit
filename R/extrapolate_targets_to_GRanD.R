@@ -4,7 +4,6 @@
 #' @param USRDATS_path path to USRDATS data
 #' @param targets_path path to fitted targets (generated using fit_targets())
 #' @importFrom dplyr select group_by ungroup filter summarise pull mutate arrange if_else first last left_join
-#' @importFrom vroom vroom cols
 #' @importFrom purrr map_dfr
 #' @return tibble dam ids to copy
 #' @export

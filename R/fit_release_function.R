@@ -1,0 +1,150 @@
+#' fit_release_function
+#'
+#' @description fit parameters of weekly-varying release function
+#' @param USRDATS_path path to USRDATS data
+#' @param dam_id integer id of dam; same as GRanD ID
+#' @param targets_path path to fitted targets. If NULL, fit_targets() will be run.
+#' @importFrom lubridate year epiweek
+#' @importFrom dplyr select group_by ungroup filter summarise pull mutate arrange if_else first last left_join lead
+#' @importFrom readr read_csv cols
+#' @return tibble of observed dam data (storage, inflow, release)
+#' @export
+#'
+fit_release_function <- function(USRDATS_path, dam_id, targets_path){
+
+  read_reservoir_attributes(USRDATS_path, dam_id) ->
+    reservoir_attributes
+
+  info(paste0("Fitting release function for dam ", dam_id, ": ",
+              reservoir_attributes[["DAM_NAME"]]))
+
+  if(missing(targets_path)){
+
+    info("targets_path not supplied; fitting storage targets...")
+
+    fit_targets(USRDATS_path, dam_id) -> fitted_targets
+
+    tibble(pf = fitted_targets[["flood target parameters"]],
+           pm = fitted_targets[["conservation target parameters"]]) ->
+      storage_target_parameters
+
+  }else{
+    # read storage target parameters straight from file if already fitted
+    read_csv(paste0(targets_path, "/", dam_id, ".csv"),
+          col_types = cols()) ->
+      storage_target_parameters
+
+    }
+
+  if(all(is.na(storage_target_parameters))){
+    problem("Storage targets unavailable due to lack of data!")
+    return(
+      list()
+    )
+  }
+
+  reservoir_attributes[[capacity_variable]] ->
+    storage_capacity_MCM
+
+  if(fitted_targets$`weekly storage` %>% .[["year"]] %>% last() < cutoff_year){
+    cutoff_year <- fitted_targets$`weekly storage` %>% .[["year"]] %>% first()
+    #problem(paste0("dam ", dam_id, "cutoff year set back to ", first_year_of_data))
+  }
+
+  read_reservoir_data(USRDATS_path, dam_id) %>%
+    mutate(i = i_cumecs * m3_to_Mm3 * seconds_per_day,
+           r = r_cumecs * m3_to_Mm3 * seconds_per_day) %>%
+    select(date, s = s_MCM, i, r) %>%
+    mutate(year = year(date), epiweek = epiweek(date)) %>%
+    filter(year >= cutoff_year) %>%
+    aggregate_to_epiweeks() %>%
+    back_calc_missing_flows() %>%
+    filter(!is.na(i) & !is.na(r),
+           i >= 0, r >= 0) -> weekly_ops_NA_removed
+
+
+  # RETURN BLANK IF INSUFFICIENT RELEASE/INFOW DATA
+  if(nrow(weekly_ops_NA_removed) <= min_r_i_datapoints){
+    problem("Insufficient data to build release function")
+    fitted_targets[["mean inflow from GRAND. (MCM / wk)"]] <- reservoir_attributes[["i_MAF_MCM"]] / weeks_per_year
+    fitted_targets[["mean inflow from obs. (MCM / wk)"]] <- NA_real_
+    fitted_targets[["release harmonic parameters"]] <- rep(NA_real_, 4)
+    fitted_targets[["release residual model coefficients"]] <- rep(NA_real_, 3)
+    return(
+      fitted_targets
+    )
+  }
+
+  weekly_ops_NA_removed %>%
+    left_join(convert_parameters_to_targets(storage_target_parameters[["pf"]],
+                                            "upper"), by = "epiweek") %>%
+    left_join(convert_parameters_to_targets(storage_target_parameters[["pm"]],
+                                            "lower"), by = "epiweek") %>%
+    mutate(avail_pct = 100 * ((s_start) / storage_capacity_MCM)) %>%
+    mutate(availability_status = (avail_pct - lower) / (upper - lower)) %>%
+    filter(availability_status <= 1,
+           availability_status > 0) %>%
+    mutate(
+      i_st = (i / mean(i)) - 1,
+      r_st = (r / mean(i)) - 1
+      ) ->
+    training_data
+
+
+  ### harmonic regression (two harmonics) for standardized release
+    lm(
+      data = training_data,
+      r_st ~ 0 +
+        # first harmonic
+        sin(2 * pi * epiweek / 52) +
+        cos(2 * pi * epiweek / 52) +
+        # second harmonic
+        sin(4 * pi * epiweek / 52) +
+        cos(4 * pi * epiweek / 52)
+    ) %>% .[["coefficients"]] %>% unname() %>%
+      round(4) ->
+      st_r_harmonic
+
+    training_data %>%
+      mutate(st_r_harmonic =
+               st_r_harmonic[1] * sin(2 * pi * epiweek / 52) +
+               st_r_harmonic[2] * cos(2 * pi * epiweek / 52) +
+               st_r_harmonic[3] * sin(4 * pi * epiweek / 52) +
+               st_r_harmonic[4] * cos(4 * pi * epiweek / 52)) %>%
+      # ggplot(aes(epiweek, r_st)) + geom_point() +
+      # geom_point(aes(y = st_r_harmonic), col = "blue")
+      mutate(r_st_resid = r_st - st_r_harmonic) ->
+      data_for_linear_model_of_release_residuals
+
+    lm(
+      data = data_for_linear_model_of_release_residuals,
+      r_st_resid ~ availability_status + i_st
+    ) -> st_r_residual_model
+
+    st_r_residual_model[["coefficients"]] %>% unname() %>%
+      round(3) ->
+      st_r_residual_model_coef
+
+    if(summary(st_r_residual_model) %>% .[["adj.r.squared"]] < 0.1){
+      info("Release residual model has low r-squared; (release will be based harmonic function only)")
+      st_r_residual_model_coef <- c(0, 0, 0)
+    }
+
+    # data_for_linear_model_of_release_residuals %>%
+    #   mutate(r_st_predicted =
+    #            st_r_residual_model_coef[1] +
+    #            st_r_residual_model_coef[2] * availability_status +
+    #            st_r_residual_model_coef[3] * i_st,
+    #          r_pred = (1 + (r_st_predicted + st_r_harmonic)) * mean(i))
+      # ggplot(aes(r, r_pred)) + geom_point() + geom_abline(slope = 1) +
+      # scale_x_continuous(trans = "log10") + scale_y_continuous(trans = "log10") %>%
+      # NULL
+
+    fitted_targets[["mean inflow from GRAND. (MCM / wk)"]] <- reservoir_attributes[["i_MAF_MCM"]] / weeks_per_year
+    fitted_targets[["mean inflow from obs. (MCM / wk)"]] <- training_data[["i"]] %>% mean()
+    fitted_targets[["release harmonic parameters"]] <- st_r_harmonic
+    fitted_targets[["release residual model coefficients"]] <- st_r_residual_model_coef
+
+    return(fitted_targets)
+
+}

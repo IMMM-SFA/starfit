@@ -5,7 +5,6 @@
 #' @param dam_id integer id of dam; same as GRanD ID
 #' @importFrom lubridate year epiweek
 #' @importFrom dplyr select group_by ungroup filter summarise pull mutate arrange if_else first last left_join
-#' @importFrom vroom vroom cols
 #' @return tibble of observed dam data (storage, inflow, release)
 #' @export
 #'
@@ -111,10 +110,10 @@ fit_targets <- function(USRDATS_path, dam_id){
     p_conservation_harmonic
 
   # evaluate targets to remove any superfluous constraints
-  convert_parameters_to_storage_targets(p_flood_harmonic,
-                                        constrain = FALSE) -> targets_flood
-  convert_parameters_to_storage_targets(p_conservation_harmonic,
-                                        constrain = FALSE) -> targets_cons
+  convert_parameters_to_targets(p_flood_harmonic,
+                                constrain = FALSE) -> targets_flood
+  convert_parameters_to_targets(p_conservation_harmonic,
+                                constrain = FALSE) -> targets_cons
 
   targets_flood[["target"]] %>% max() -> max_flood_target
   targets_flood[["target"]] %>% min() -> min_flood_target
