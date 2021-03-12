@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# rulecurve <img src='man/figures/logo.png' align="right" height="101.5" />
+# starfit <img src='man/figures/logo.png' align="right" height="101.5" />
 
 <!-- badges: start -->
 
@@ -9,7 +9,7 @@
 status](https://travis-ci.com/IMMM-SFA/rulecurve.svg?branch=master)](https://travis-ci.com/IMMM-SFA/rulecurve)
 <!-- badges: end -->
 
-`rulecurve` is a package that is designed to work with reservoir time
+`starfit` is a package that is designed to work with reservoir time
 series data in [USRDATS]() to infer operating storage targets and
 release functions.
 
@@ -18,7 +18,7 @@ release functions.
 Install `rulecurve` using `devtools`:
 
 ``` r
-devtools::install_github("IMMM-SFA/rulecurve")
+devtools::install_github("IMMM-SFA/starfit")
 ```
 
 #### Example - fit storage targets for Garrison Dam, North Dakota.
@@ -35,13 +35,13 @@ fit_targets(your_path_to_USRDATS, dam_id = 753) -> fitted_targets
 # take a look at the output:
 str(fitted_targets)
 #> List of 4
-#>  $ id                            : num 753
-#>  $ weekly storage                : tibble [1,306 × 3] (S3: tbl_df/tbl/data.frame)
+#>  $ id             : num 753
+#>  $ weekly storage : tibble [1,306 × 3] (S3: tbl_df/tbl/data.frame)
 #>   ..$ year   : num [1:1306] 1995 1995 1995 1995 1995 ...
 #>   ..$ epiweek: num [1:1306] 1 2 3 4 5 6 7 8 9 10 ...
 #>   ..$ s_pct  : num [1:1306] 74.1 73.3 72.9 72.5 72 ...
-#>  $ flood target parameters       : num [1:5] 84.23 -3.83 -9.18 94.31 77.23
-#>  $ conservation target parameters: num [1:5] 45.55 -2.8 -2.11 49.81 42.41
+#>  $ NSR upper bound: num [1:5] 84.23 -3.83 -9.18 Inf 77.23
+#>  $ NSR lower bound: num [1:5] 45.55 -2.8 -2.11 Inf 42.41
 ```
 
 Here we can see that the `fit_targets()` function has generated a list
@@ -52,11 +52,11 @@ parameters for (3) and (4) can be converted to storage targets using
 `convert_parameters_to_storage_targets()`.
 
 ``` r
-fitted_targets[["flood target parameters"]] %>% 
-  convert_parameters_to_storage_targets("flood") -> flood_targets
+fitted_targets[["NSR upper bound"]] %>% 
+  convert_parameters_to_targets("flood") -> flood_targets
 
-fitted_targets[["conservation target parameters"]] %>% 
-  convert_parameters_to_storage_targets("conservation") -> conservation_targets
+fitted_targets[["NSR lower bound"]] %>% 
+  convert_parameters_to_targets("conservation") -> conservation_targets
 ```
 
 Then we can combine these targets with the weekly storage data to view

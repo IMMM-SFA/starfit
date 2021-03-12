@@ -1,5 +1,5 @@
-Package: rulecurve
-Title: Infer Reservoir Operations From Data.
+Package: starfit
+Title: Storage Target and Release Function Inference Tool
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Sean",
@@ -7,12 +7,12 @@ Authors@R:
            role = c("aut", "cre"),
            email = "sean.turner@pnnl.gov",
            comment = c(ORCID = "0000-0003-4400-9800"))
-Description: A tool for inferring reservoir storage targets and release rules.
+Description: A tool for inferring reservoir storage targets and release functions.
 License: BSD 2-Clause
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Suggests: 
     testthat
 Imports: 
