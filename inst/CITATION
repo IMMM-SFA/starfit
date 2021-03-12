@@ -1,4 +1,4 @@
-citHeader("To cite rulecurve in publications use:")
+citHeader("To cite starfit in publications use:")
 
 citEntry(
   entry    = "Article",

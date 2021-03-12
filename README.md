@@ -6,7 +6,7 @@
 <!-- badges: start -->
 
 [![Travis build
-status](https://travis-ci.com/IMMM-SFA/rulecurve.svg?branch=master)](https://travis-ci.com/IMMM-SFA/rulecurve)
+status](https://travis-ci.com/IMMM-SFA/starfit.svg?branch=master)](https://travis-ci.com/IMMM-SFA/starfit)
 <!-- badges: end -->
 
 `starfit` is a package that is designed to work with reservoir time
@@ -15,7 +15,7 @@ release functions.
 
 ## Installation
 
-Install `rulecurve` using `devtools`:
+Install `starfit` using `devtools`:
 
 ``` r
 devtools::install_github("IMMM-SFA/starfit")
@@ -28,7 +28,7 @@ use the `fit_targets()` function to infer parameters of weekly storage
 targets for this dam (which is GRanD ID 753).
 
 ``` r
-library(rulecurve)
+library(starfit)
 fit_targets(your_path_to_USRDATS, dam_id = 753) -> fitted_targets
 #> ℹ Fitting targets for dam 753: Garrison Dam
 

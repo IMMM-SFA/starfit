@@ -16,14 +16,14 @@ knitr::opts_chunk$set(
 # starfit <img src='man/figures/logo.png' align="right" height="101.5" />
 
 <!-- badges: start -->
-[![Travis build status](https://travis-ci.com/IMMM-SFA/rulecurve.svg?branch=master)](https://travis-ci.com/IMMM-SFA/rulecurve)
+[![Travis build status](https://travis-ci.com/IMMM-SFA/starfit.svg?branch=master)](https://travis-ci.com/IMMM-SFA/starfit)
 <!-- badges: end -->
 
 `starfit` is a package that is designed to work with reservoir time series data in [USRDATS]() to infer operating storage targets and release functions.
 
 ## Installation
 
-Install `rulecurve` using `devtools`:
+Install `starfit` using `devtools`:
 
 ``` r
 devtools::install_github("IMMM-SFA/starfit")
@@ -39,7 +39,7 @@ your_path_to_USRDATS <- "../../../../../__collaborations/USRDATS"
 
 
 ```{r}
-library(rulecurve)
+library(starfit)
 fit_targets(your_path_to_USRDATS, dam_id = 753) -> fitted_targets
 
 # take a look at the output:
