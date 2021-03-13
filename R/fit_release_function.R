@@ -5,7 +5,7 @@
 #' @param dam_id integer id of dam; same as GRanD ID
 #' @param targets_path path to fitted targets. If NULL, fit_targets() will be run.
 #' @importFrom lubridate year epiweek
-#' @importFrom dplyr select group_by ungroup filter summarise pull mutate arrange if_else first last left_join lead
+#' @importFrom dplyr select group_by ungroup filter summarise pull mutate arrange if_else first last left_join lead count
 #' @importFrom readr read_csv cols
 #' @return tibble of observed dam data (storage, inflow, release)
 #' @export
@@ -20,12 +20,12 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
 
   if(missing(targets_path)){
 
-    info("targets_path not supplied; fitting storage targets...")
+    #info("targets_path not supplied; fitting storage targets...")
 
     fit_targets(USRDATS_path, dam_id) -> fitted_targets
 
-    tibble(pf = fitted_targets[["flood target parameters"]],
-           pm = fitted_targets[["conservation target parameters"]]) ->
+    tibble(pf = fitted_targets[["NSR upper bound"]],
+           pm = fitted_targets[["NSR lower bound"]]) ->
       storage_target_parameters
 
   }else{
@@ -56,11 +56,17 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
            r = r_cumecs * m3_to_Mm3 * seconds_per_day) %>%
     select(date, s = s_MCM, i, r) %>%
     mutate(year = year(date), epiweek = epiweek(date)) %>%
-    filter(year >= cutoff_year) %>%
+    filter(year >= cutoff_year) -> daily_ops
+
+  daily_ops %>% filter(s + i < storage_capacity_MCM) ->
+    daily_ops_non_spill_periods
+
+  daily_ops %>%
     aggregate_to_epiweeks() %>%
     back_calc_missing_flows() %>%
     filter(!is.na(i) & !is.na(r),
-           i >= 0, r >= 0) -> weekly_ops_NA_removed
+           i >= 0, r >= 0) ->
+    weekly_ops_NA_removed
 
 
   # RETURN BLANK IF INSUFFICIENT RELEASE/INFOW DATA
@@ -70,9 +76,21 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
     fitted_targets[["mean inflow from obs. (MCM / wk)"]] <- NA_real_
     fitted_targets[["release harmonic parameters"]] <- rep(NA_real_, 4)
     fitted_targets[["release residual model coefficients"]] <- rep(NA_real_, 3)
+    fitted_targets[["release constraints"]] <- c(NA_real_, NA_real_)
     return(
       fitted_targets
     )
+  }
+
+  # get most representative mean flow value available
+  # either from daily or weekly (back-calculated) data
+
+  daily_ops %>% filter(!is.na(i)) %>% .[["i"]] -> i_daily
+
+  if(length(i_daily) > min_r_i_datapoints * 7){
+    i_mean <- mean(i_daily) * 7
+  }else{
+    i_mean <- mean(weekly_ops_NA_removed[["i"]])
   }
 
   weekly_ops_NA_removed %>%
@@ -82,14 +100,31 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
                                             "lower"), by = "epiweek") %>%
     mutate(avail_pct = 100 * ((s_start) / storage_capacity_MCM)) %>%
     mutate(availability_status = (avail_pct - lower) / (upper - lower)) %>%
-    filter(availability_status <= 1,
-           availability_status > 0) %>%
     mutate(
-      i_st = (i / mean(i)) - 1,
-      r_st = (r / mean(i)) - 1
-      ) ->
-    training_data
+      i_st = (i / i_mean) - 1,
+      r_st = (r / i_mean) - 1
+    ) ->
+    training_data_unfiltered
 
+  # define max and min release constraints
+  daily_ops_non_spill_periods %>% filter(!is.na(r)) %>% .[["r"]] -> r_daily
+
+  # use daily release data to define max release (if possible)
+  if(length(r_daily) > min_r_i_datapoints * 7){
+    r_st_max <- ((quantile(r_daily, r_st_max_quantile) %>% unname() %>% round(4) * 7) / i_mean) - 1
+    r_st_min <- ((quantile(r_daily, r_st_min_quantile) %>% unname() %>% round(4) * 7) / i_mean) - 1
+  }else{
+    training_data_unfiltered %>%
+      filter(s_start + i < storage_capacity_MCM) %>% .[["r_st"]] -> r_st_vector
+    quantile(r_st_vector, r_st_min_quantile) %>% unname() %>% round(4) -> r_st_min
+    quantile(r_st_vector, r_st_max_quantile) %>% unname() %>% round(4) -> r_st_max
+  }
+
+  # create final training data for normal operating period
+  training_data_unfiltered %>%
+    filter(availability_status <= 1,
+           availability_status > 0) ->
+    training_data
 
   ### harmonic regression (two harmonics) for standardized release
     lm(
@@ -125,8 +160,37 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
       round(3) ->
       st_r_residual_model_coef
 
-    if(summary(st_r_residual_model) %>% .[["adj.r.squared"]] < 0.1){
-      info("Release residual model has low r-squared; (release will be based harmonic function only)")
+    # deal with any negative coefficients by setting to zero and re-fitting
+    if(st_r_residual_model_coef[2] < 0 & st_r_residual_model_coef[3] >= 0){
+      lm(
+        data = data_for_linear_model_of_release_residuals,
+        r_st_resid ~ i_st
+      ) -> st_r_residual_model
+
+      c(st_r_residual_model[["coefficients"]][[1]],
+        0,
+        st_r_residual_model[["coefficients"]][[2]]) %>%
+        round(3) ->
+        st_r_residual_model_coef
+    }
+
+    if(st_r_residual_model_coef[3] < 0 & st_r_residual_model_coef[2] >= 0){
+      lm(
+        data = data_for_linear_model_of_release_residuals,
+        r_st_resid ~ availability_status
+      ) -> st_r_residual_model
+
+      c(st_r_residual_model[["coefficients"]][[1]],
+        st_r_residual_model[["coefficients"]][[2]],
+        0) %>%
+        round(3) ->
+        st_r_residual_model_coef
+    }
+
+    if(summary(st_r_residual_model) %>% .[["adj.r.squared"]] < r_sq_tol |
+       st_r_residual_model_coef[2] < 0 |
+       st_r_residual_model_coef[3] < 0) {
+      info("Release residual model will be discarded; (release will be based harmonic function only)")
       st_r_residual_model_coef <- c(0, 0, 0)
     }
 
@@ -141,9 +205,10 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
       # NULL
 
     fitted_targets[["mean inflow from GRAND. (MCM / wk)"]] <- reservoir_attributes[["i_MAF_MCM"]] / weeks_per_year
-    fitted_targets[["mean inflow from obs. (MCM / wk)"]] <- training_data[["i"]] %>% mean()
+    fitted_targets[["mean inflow from obs. (MCM / wk)"]] <- i_mean
     fitted_targets[["release harmonic parameters"]] <- st_r_harmonic
     fitted_targets[["release residual model coefficients"]] <- st_r_residual_model_coef
+    fitted_targets[["release constraints"]] <- c(r_st_min, r_st_max)
 
     return(fitted_targets)
 

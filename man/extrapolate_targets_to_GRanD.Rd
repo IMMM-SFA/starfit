@@ -4,12 +4,21 @@
 \alias{extrapolate_targets_to_GRanD}
 \title{extrapolate_targets_to_GRanD}
 \usage{
-extrapolate_targets_to_GRanD(USRDATS_path, targets_path)
+extrapolate_targets_to_GRanD(
+  USRDATS_path,
+  targets_path,
+  include_all = FALSE,
+  HUC_04_correction = TRUE
+)
 }
 \arguments{
 \item{USRDATS_path}{path to USRDATS data}
 
 \item{targets_path}{path to fitted targets (generated using fit_targets())}
+
+\item{include_all}{T/F (if T, returns results for dams in the trained set)}
+
+\item{HUC_04_correction}{T/F (if T, replaces Great Lakes HUC2 with neighboring HUC2s...(deals with missing data for all of Great Lakes))}
 }
 \value{
 tibble dam ids to copy

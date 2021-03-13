@@ -29,8 +29,8 @@ fit_targets <- function(USRDATS_path, dam_id){
       list(
         "id" = dam_id,
         "weekly storage" = tibble(),
-        "flood target parameters" = rep(NA_real_, 5),
-        "conservation target parameters" = rep(NA_real_, 5)
+        "NSR upper bound" = rep(NA_real_, 5),
+        "NSR lower bound" = rep(NA_real_, 5)
       )
     )
   }
@@ -101,12 +101,12 @@ fit_targets <- function(USRDATS_path, dam_id){
 
   # fit the flood harmonic
   fit_constrained_harmonic(data_for_flood_harmonic) %>%
-    .[["solution"]] ->
+    .[["solution"]] %>% round(3) ->
     p_flood_harmonic
 
   # fit the conservation harmonic
   fit_constrained_harmonic(data_for_conservation_harmonic) %>%
-    .[["solution"]] ->
+    .[["solution"]] %>% round(3) ->
     p_conservation_harmonic
 
   # evaluate targets to remove any superfluous constraints
@@ -129,8 +129,8 @@ fit_targets <- function(USRDATS_path, dam_id){
     list(
       "id" = dam_id,
       "weekly storage" = storage_weekly,
-      "flood target parameters" = p_flood_harmonic,
-      "conservation target parameters" = p_conservation_harmonic
+      "NSR upper bound" = p_flood_harmonic,
+      "NSR lower bound" = p_conservation_harmonic
     )
   )
 

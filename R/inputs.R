@@ -10,7 +10,7 @@
 #'
 read_reservoir_data <- function(USRDATS_path, dam_id){
 
-  read_csv(paste0(USRDATS_path, "/TimeSeriesv2/",
+  read_csv(paste0(USRDATS_path, "/TimeSeries_all/ResOpsUSA_",
                   dam_id, ".csv"),
            col_types = cols(date = "D",
                             storage = "d",
@@ -65,7 +65,7 @@ read_reservoir_attributes <- function(USRDATS_path, dam_id = NULL){
 read_GRanD_HUC8 <- function(){
 
   read_csv(
-    paste0(system.file("extdata/", package = "rulecurve"),
+    paste0(system.file("extdata/", package = "starfit"),
            "GRAND_HUC8.csv"),
     comment = "#", col_types = cols())
 

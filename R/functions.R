@@ -112,6 +112,10 @@ find_closest_dam <- function(dam_attr, other_dams){
   dam_attr[["supply"]] -> su
   dam_attr[["irr"]] -> ir
 
+  if(is.na(fl)) fl <- TRUE
+  if(is.na(hy)) hy <- TRUE
+  if(is.na(su)) su <- TRUE
+  if(is.na(ir)) ir <- TRUE
 
   # determine best matches
   other_dams %>%
