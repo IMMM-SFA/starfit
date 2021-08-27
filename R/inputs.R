@@ -30,15 +30,16 @@ read_reservoir_data <- function(USRDATS_path, dam_id){
 #' @param USRDATS_path directory containing reservoir input time series
 #' @param dam_id integer id of dam; same as GRanD ID. If NULL, all attributes are returned.
 #' @importFrom readr read_csv cols
-#' @importFrom dplyr select
+#' @importFrom dplyr select as_tibble
+#' @importFrom sf st_read
 #' @return tibble of reservoir attributes for selected dams
 #' @export
 #'
-read_reservoir_attributes <- function(USRDATS_path, dam_id = NULL){
+read_reservoir_attributes <- function(GRanD_path, dam_id = NULL){
 
-  read_csv(paste0(USRDATS_path, "/attributes/",
-                  "Reservoir_Attributes_Publishable.csv"),
-           col_types = cols(), progress = FALSE) -> attributes_all
+  st_read(paste0(GRanD_path, "GRanD_dams_v1_3.shp")) %>%
+    as_tibble() %>%
+    filter(COUNTRY %in% "United States") -> attributes_all
 
   if(is.null(dam_id)){
     return(attributes_all)

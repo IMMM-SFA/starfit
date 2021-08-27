@@ -24,5 +24,6 @@ Imports:
     nloptr,
     purrr,
     sp,
+    sf,
     clisymbols,
     crayon

@@ -2,6 +2,7 @@
 #'
 #' @description fit parameters of weekly-varying release function
 #' @param USRDATS_path path to USRDATS data
+#' @param GRanD_path path to v1.3 of GRanD database
 #' @param dam_id integer id of dam; same as GRanD ID
 #' @param targets_path path to fitted targets. If NULL, fit_targets() will be run.
 #' @importFrom lubridate year epiweek
@@ -10,9 +11,9 @@
 #' @return tibble of observed dam data (storage, inflow, release)
 #' @export
 #'
-fit_release_function <- function(USRDATS_path, dam_id, targets_path){
+fit_release_function <- function(USRDATS_path, GRanD_path, dam_id, targets_path){
 
-  read_reservoir_attributes(USRDATS_path, dam_id) ->
+  read_reservoir_attributes(GRanD_path, dam_id) ->
     reservoir_attributes
 
   info(paste0("Fitting release function for dam ", dam_id, ": ",
@@ -22,7 +23,7 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
 
     #info("targets_path not supplied; fitting storage targets...")
 
-    fit_targets(USRDATS_path, dam_id) -> fitted_targets
+    fit_targets(USRDATS_path, GRanD_path, dam_id, reservoir_attributes) -> fitted_targets
 
     tibble(pf = fitted_targets[["NSR upper bound"]],
            pm = fitted_targets[["NSR lower bound"]]) ->
@@ -110,14 +111,14 @@ fit_release_function <- function(USRDATS_path, dam_id, targets_path){
   daily_ops_non_spill_periods %>% filter(!is.na(r)) %>% .[["r"]] -> r_daily
 
   # use daily release data to define max release (if possible)
-  if(length(r_daily) > min_r_i_datapoints * 7){
+  if(length(r_daily) > min_r_maxmin_days){
     r_st_max <- ((quantile(r_daily, r_st_max_quantile) %>% unname() %>% round(4) * 7) / i_mean) - 1
     r_st_min <- ((quantile(r_daily, r_st_min_quantile) %>% unname() %>% round(4) * 7) / i_mean) - 1
   }else{
     training_data_unfiltered %>%
       filter(s_start + i < storage_capacity_MCM) %>% .[["r_st"]] -> r_st_vector
-    quantile(r_st_vector, r_st_min_quantile) %>% unname() %>% round(4) -> r_st_min
-    quantile(r_st_vector, r_st_max_quantile) %>% unname() %>% round(4) -> r_st_max
+    quantile(r_st_vector, r_st_min_quantile, na.rm = TRUE) %>% unname() %>% round(4) -> r_st_min
+    quantile(r_st_vector, r_st_max_quantile, na.rm = TRUE) %>% unname() %>% round(4) -> r_st_max
   }
 
   # create final training data for normal operating period

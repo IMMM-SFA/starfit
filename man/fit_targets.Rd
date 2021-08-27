@@ -4,12 +4,16 @@
 \alias{fit_targets}
 \title{fit_targets}
 \usage{
-fit_targets(USRDATS_path, dam_id)
+fit_targets(USRDATS_path, GRanD_path, dam_id, reservoir_attributes)
 }
 \arguments{
 \item{USRDATS_path}{path to USRDATS data}
 
+\item{GRanD_path}{path to v1.3 of GRanD database}
+
 \item{dam_id}{integer id of dam; same as GRanD ID}
+
+\item{reservoir_attributes}{tibble of GRanD attributes for selected dam}
 }
 \value{
 tibble of observed dam data (storage, inflow, release)

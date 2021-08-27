@@ -4,10 +4,12 @@
 \alias{fit_release_function}
 \title{fit_release_function}
 \usage{
-fit_release_function(USRDATS_path, dam_id, targets_path)
+fit_release_function(USRDATS_path, GRanD_path, dam_id, targets_path)
 }
 \arguments{
 \item{USRDATS_path}{path to USRDATS data}
+
+\item{GRanD_path}{path to v1.3 of GRanD database}
 
 \item{dam_id}{integer id of dam; same as GRanD ID}
 

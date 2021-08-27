@@ -2,16 +2,20 @@
 #'
 #' @description fit parameters of storage targets
 #' @param USRDATS_path path to USRDATS data
+#' @param GRanD_path path to v1.3 of GRanD database
 #' @param dam_id integer id of dam; same as GRanD ID
+#' @param reservoir_attributes tibble of GRanD attributes for selected dam
 #' @importFrom lubridate year epiweek
 #' @importFrom dplyr select group_by ungroup filter summarise pull mutate arrange if_else first last left_join
 #' @return tibble of observed dam data (storage, inflow, release)
 #' @export
 #'
-fit_targets <- function(USRDATS_path, dam_id){
+fit_targets <- function(USRDATS_path, GRanD_path, dam_id, reservoir_attributes){
 
-  read_reservoir_attributes(USRDATS_path, dam_id) ->
-    reservoir_attributes
+  if(missing(reservoir_attributes)){
+    read_reservoir_attributes(GRanD_path, dam_id) ->
+      reservoir_attributes
+  }
 
   info(paste0("Fitting targets for dam ", dam_id, ": ",
                  reservoir_attributes[["DAM_NAME"]]))

@@ -4,12 +4,12 @@
 \alias{read_reservoir_attributes}
 \title{read_reservoir_attributes}
 \usage{
-read_reservoir_attributes(USRDATS_path, dam_id = NULL)
+read_reservoir_attributes(GRanD_path, dam_id = NULL)
 }
 \arguments{
-\item{USRDATS_path}{directory containing reservoir input time series}
-
 \item{dam_id}{integer id of dam; same as GRanD ID. If NULL, all attributes are returned.}
+
+\item{USRDATS_path}{directory containing reservoir input time series}
 }
 \value{
 tibble of reservoir attributes for selected dams

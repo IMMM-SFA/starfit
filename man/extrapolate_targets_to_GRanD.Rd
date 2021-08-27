@@ -5,14 +5,15 @@
 \title{extrapolate_targets_to_GRanD}
 \usage{
 extrapolate_targets_to_GRanD(
-  USRDATS_path,
+  GRanD_path,
   targets_path,
   include_all = FALSE,
-  HUC_04_correction = TRUE
+  HUC_04_correction = TRUE,
+  distance_only = FALSE
 )
 }
 \arguments{
-\item{USRDATS_path}{path to USRDATS data}
+\item{GRanD_path}{path to v1.3 of GRanD database}
 
 \item{targets_path}{path to fitted targets (generated using fit_targets())}
 

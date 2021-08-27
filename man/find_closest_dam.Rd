@@ -4,12 +4,14 @@
 \alias{find_closest_dam}
 \title{find_closest_dam}
 \usage{
-find_closest_dam(dam_attr, other_dams)
+find_closest_dam(dam_attr, other_dams, distance_only = FALSE)
 }
 \arguments{
 \item{dam_attr}{attributes of target dam}
 
 \item{other_dams}{table of attributes for possible canditate dams to replicate}
+
+\item{distance_only}{allows for use of closest distance only (disregarding purpose)}
 }
 \value{
 GRAND_ID of the target dam

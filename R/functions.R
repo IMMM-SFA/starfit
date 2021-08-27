@@ -29,6 +29,36 @@ convert_parameters_to_targets <- function(parameters, target_name, constrain = T
 
 }
 
+#' convert_parameters_to_release_harmonic
+#'
+#' @description fit parameters of a constrained harmonic
+#' @param parameters vector of length 4 giving, in order, first sine term, first cosine term, second sine term, second cosine term.
+#' @return a tibble of storage target levels by week
+#' @importFrom tibble tibble
+#' @importFrom dplyr mutate
+#' @export
+#'
+convert_parameters_to_release_harmonic <- function(parameters){
+
+  parameters[1] -> p1
+  parameters[2] -> p2
+  parameters[3] -> p3
+  parameters[4] -> p4
+
+
+  tibble(epiweek = 1:52) %>%
+    mutate(
+      release_harmonic =
+        p1 * sin(2 * pi * epiweek / 52) +
+        p2 * cos(2 * pi * epiweek / 52) +
+        p3 * sin(4 * pi * epiweek / 52) +
+        p4 * cos(4 * pi * epiweek / 52)
+    ) -> release_harmonic
+
+  return(release_harmonic)
+
+}
+
 
 #' fit_constrained_harmonic
 #'
@@ -97,15 +127,33 @@ fit_constrained_harmonic <- function(data_for_harmonic_fitting){
 #' @description finds the dam that is closest in terms of purposes served and Euclidean distance
 #' @param dam_attr attributes of target dam
 #' @param other_dams table of attributes for possible canditate dams to replicate
+#' @param distance_only allows for use of closest distance only (disregarding purpose)
 #' @return GRAND_ID of the target dam
 #' @importFrom tibble tibble
 #' @importFrom dplyr mutate if_else arrange select first
 #' @importFrom sp spDistsN1
 #' @export
 #'
-find_closest_dam <- function(dam_attr, other_dams){
+find_closest_dam <- function(dam_attr, other_dams, distance_only = FALSE){
 
   if(nrow(other_dams) == 0) return(tibble(GRAND_ID = NA_character_, matches = -Inf))
+
+  if(distance_only == TRUE){
+
+    other_dams %>%
+      mutate(
+        euc_dist = spDistsN1(
+          as.matrix(select(other_dams, lon, lat)),
+          as.matrix(select(dam_attr, lon, lat)),
+          longlat = TRUE
+        )
+      ) %>%
+      arrange(euc_dist) %>% .[1,] -> best_match
+
+    return(select(best_match, GRAND_ID) %>%
+             mutate(clear_winner = NA, matches = NA))
+
+  }
 
   dam_attr[["flood"]] -> fl
   dam_attr[["hydro"]] -> hy
@@ -128,7 +176,8 @@ find_closest_dam <- function(dam_attr, other_dams){
     filter(matches == first(.[["matches"]])) -> best_matches
 
   # return if there is a clear winning match
-  if(nrow(best_matches) == 1) return(select(best_matches, GRAND_ID, matches))
+  if(nrow(best_matches) == 1) return(select(best_matches, GRAND_ID, matches) %>%
+                                       mutate(clear_winner = TRUE))
 
   # otherwise find closest distance
 
@@ -136,12 +185,14 @@ find_closest_dam <- function(dam_attr, other_dams){
     mutate(
       euc_dist = spDistsN1(
         as.matrix(select(best_matches, lon, lat)),
-        as.matrix(select(dam_attr, lon, lat))
+        as.matrix(select(dam_attr, lon, lat)),
+        longlat = TRUE
         )
       ) %>%
-    arrange(-euc_dist) %>% .[1,] -> best_match
+    arrange(euc_dist) %>% .[1,] -> best_match
 
-  return(select(best_match, GRAND_ID, matches))
+  return(select(best_match, GRAND_ID, matches) %>%
+           mutate(clear_winner = FALSE))
 
 }
 
