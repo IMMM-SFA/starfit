@@ -10,7 +10,7 @@
 #'
 read_reservoir_data <- function(USRDATS_path, dam_id){
 
-  read_csv(paste0(USRDATS_path, "/TimeSeries_all/ResOpsUSA_",
+  read_csv(paste0(USRDATS_path, "/TimeSeries_all/ResOpsUS_",
                   dam_id, ".csv"),
            col_types = cols(date = "D",
                             storage = "d",
