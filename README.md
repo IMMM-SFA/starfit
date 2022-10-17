@@ -10,7 +10,7 @@ status](https://travis-ci.com/IMMM-SFA/starfit.svg?branch=master)](https://travi
 <!-- badges: end -->
 
 `starfit` is a package that is designed to work with reservoir time
-series data in [USRDATS]() to infer operating storage targets and
+series data in ResOpsUS ([dataset](https://doi.org/10.5281/zenodo.5367382); [paper](https://www.nature.com/articles/s41597-022-01134-7)) to infer operating storage targets and
 release functions.
 
 ## Installation
@@ -23,13 +23,13 @@ devtools::install_github("IMMM-SFA/starfit")
 
 #### Example - fit storage targets for Garrison Dam, North Dakota.
 
-This example assumes that you have downloaded [USRDATS](). First, we’ll
+This example assumes that you have downloaded the [ResOpsUS dataset](https://doi.org/10.5281/zenodo.5367382). First, we’ll
 use the `fit_targets()` function to infer parameters of weekly storage
 targets for this dam (which is GRanD ID 753).
 
 ``` r
 library(starfit)
-fit_targets(your_path_to_USRDATS, dam_id = 753) -> fitted_targets
+fit_targets(your_path_to_ResOpsUS, dam_id = 753) -> fitted_targets
 #> ℹ Fitting targets for dam 753: Garrison Dam
 
 # take a look at the output:
